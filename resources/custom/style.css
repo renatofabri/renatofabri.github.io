@@ -25,13 +25,15 @@ img {
 }
 
 /** rEaL cSs sTaRtS hErE! **/
+html {
+  height: 100%;
+}
 
 body {
     background-color: #fefefe;
-}
-
-span {
-    display: table;
+    font-family: 'Allerta';
+    position: relative;
+    min-height: 100%;
 }
 
 .wideblock {
@@ -39,42 +41,34 @@ span {
     position: relative;
 }
 
-.head {
-    background-color: #3c3c3c;
-    background-image: linear-gradient(#3c3c3c, #7c7c7c);
-    border-bottom: 1px solid #000000;
-    height: 50px;
+.head, .foot {
+  background-color: #3c3c3c;
+  color: #fefefe;
 }
-.head:before {
-    content: " ";
-    position: absolute;
-    top: 0px;
-    right: 0px;
-    bottom: 0px;
-    left: 0px;
-    border-bottom: 1px solid #bbbbbb;
+
+.head {
+  height: 50px;
+  line-height: 50px;
+  font-family: 'Permanent Marker';
+  font-size: 32px;
 }
 
 .content {
     min-height: 600px;
+    margin: 0 auto;
 }
 
 .foot {
-    /*background-image: linear-gradient(#3c3c3c, #7c7c7c);*/
-    background-color: #99b433;
-    height: 21px;
-
-    padding-top: 0px;
-    position: fixed;
-    bottom: 0;
-    line-height: 21px;
+  background-color: #efefef;
+  color: #3c3c3c;
+  height: 21px;
+  line-height: 21px;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  position: absolute;
 }
-.foot:before {
-    content: " ";
-    position: absolute;
-    top: 0px;
-    right: 0px;
-    bottom: 0px;
-    left: 0px;
-    
+
+.strike {
+  text-decoration: line-through;
 }
