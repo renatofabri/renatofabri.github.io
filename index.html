@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
     <head>
         <link href=
@@ -20,4 +20,36 @@
     <script src=
       "https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
     <!-- Contact me at: renato[underscore]sfabri[at]hotmail[dot]com. -->
+</html>
+ -->
+<html>
+  <head>
+    <script>
+      function play() {
+        var audio = new Audio('https://interactive-examples.mdn.mozilla.net/media/cc0-audio/t-rex-roar.mp3');
+        audio.play();
+      }
+      function startTime(min=0, sec=0) {
+        time = checkTime({min, sec});
+        document.getElementById('txt').innerHTML =  `${time.min}:${time.sec}`;
+        if (["00", 30].includes(time.sec)) {
+          play();
+        }
+        setTimeout(startTime, 1000, time.min, time.sec);
+      }
+
+      function checkTime(time) {
+        time.sec++;
+        if (time.sec > 59) {time.sec = 0; time.min++}
+        if (time.min < 10 && [undefined, 1].includes(time.min.length)) { time.min = "0" + time.min};
+        if (time.sec < 10) {time.sec = "0" + time.sec};
+        return {min: time.min, sec: time.sec};
+      }
+    </script>
+  </head>
+  <body onload="startTime()">
+    <div style="text-align: center; font-size: 250px">
+      <h1 id="txt">00:00</h1>
+    </div>
+  </body>
 </html>
