@@ -1,3 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Exercise</title>
+  <style>
+    canvas {
+      width: 800px;
+      height: 800px;
+      border: 1px solid black;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Exercise</h1>
+  <canvas id="graphCanvas" width="800" height="800">
+    Your browser does not support the canvas element.
+  </canvas>
+  <script>
+    // half the width and height of the canvas
+    canvasOffsetX = canvasOffsetY = 400;
+
+    function writeToCanvas(text, context, coordinates) {
+      context.font = "bold 16px Arial";
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(text, coordinates[0]+30, coordinates[1]);      
+    }
+
+    function plotCircle(coordinates, description="", color="black", radius=2) {
+      var canvas = document.getElementById("graphCanvas");
+      var context = canvas.getContext("2d");
+      context.beginPath();
+      context.arc(coordinates[0], coordinates[1], radius, 0, 2 * Math.PI, false);
+      context.fillStyle = color;
+      context.fill();
+      writeToCanvas(description, context, coordinates);
+      context.stroke();
+    }
+
+    function plotPolyline(coordinatesArray) {
+
+      var canvas = document.getElementById("graphCanvas");
+      var context = canvas.getContext("2d");
+      context.beginPath();
+
+      var start = toCanvas(coordinatesArray[0]);
+      plotCircle(start, "start");
+
+      var end = toCanvas(coordinatesArray[coordinatesArray.length-1]);
+      plotCircle(end, "end");
+
+      context.moveTo(coordinatesArray[0][0]+canvasOffsetX, coordinatesArray[0][1]+canvasOffsetY);
+      for (var i = 1; i < coordinatesArray.length; i++) {
+        var pos = coordinatesArray[i];
+        pos = toCanvas(pos);
+        context.lineTo(pos[0], pos[1]);
+      }
+      context.stroke();
+
+      for (var i = 1; i < coordinatesArray.length -1; i++) {
+        var pos = coordinatesArray[i];
+        pos = toCanvas(pos);
+        plotCircle(pos, i);
+      }
+      
+    }
+    // canvas starts at 0,0 in the top left corner, so we have to fix it
+    function toCanvas(pos) {
+      return [pos[0]+canvasOffsetX, pos[1]+canvasOffsetY];
+    }
+
+    // from input.csv, but only half of it to be an actual line
+    var coordinatesArray = [
+      [-150,-200],
+      [-100,-45],
+      [20,40],
+      [100,50],
+      // [-150,-200],
+      // [125,100],
+      // [200,150],
+      // [300,175],
+    ];
+
+    plotPolyline(coordinatesArray);
+    plotCircle([128, 465], "test");
+
+  </script>
+</body>
+</html>
 <!-- <!DOCTYPE html>
 <html>
     <head>
@@ -21,7 +111,7 @@
       "https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
     <!-- Contact me at: renato[underscore]sfabri[at]hotmail[dot]com.
 </html>
- -->
+
 <html>
   <head>
     <script>
@@ -53,3 +143,4 @@
     </div>
   </body>
 </html>
+ -->
