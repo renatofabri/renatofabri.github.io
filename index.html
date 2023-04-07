@@ -12,186 +12,298 @@
 </head>
 
 <body>
-  <h1>Exercise</h1>
-  <canvas id="graphCanvas" width="800" height="800">
-    Your browser does not support the canvas element.
-  </canvas>
+  <h1>Files</h1>
+  <p>Polyline Coordinates:</p>
+  <input type="file" id="polyline-coordinates" onchange="readSelectedFile(this, 'polyline')">
+  <p>Input Points:</p>
+  <input type="file" id="input-points" onchange="readSelectedFile(this, 'input')">
+
+  <h1>Cartesian Plane</h1>
+  <div id="canvas-wrapper">
+    <canvas id="graph-canvas" width="800" height="800">
+      Your browser does not support the canvas element.
+    </canvas>
+  </div>
   <h1>Segments</h1>
-  <div id="segmentsList">
+  <div id="results">
 
   </div>
-  <div id="message">
 
-  </div>
   <script>
-    // half the width and height of the canvas
-    canvasOffset = canvasOffsetX = 400;
-    canvasOffsetY = 400;
+/* GLOBAL VARS */
 
-    var segments = [];
+var resultsDOM = document.getElementById('results');
+var canvas = document.getElementById("graph-canvas");
+var context = canvas.getContext("2d");
 
-    function writeToCanvas(text, context, coordinates) {
-      context.font = "bold 16px Arial";
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillText(text, coordinates[0]+30, coordinates[1]);      
-    }
+canvasOffset = canvasOffsetX = canvasOffsetY = 400;
 
-    function plotCircle(coordinates, description="", color="black", radius=2) {
-      var canvas = document.getElementById("graphCanvas");
-      var context = canvas.getContext("2d");
-      context.beginPath();
-      context.arc(coordinates[0], coordinates[1], radius, 0, 2 * Math.PI, false);
-      context.fillStyle = color;
-      context.fill();
-      writeToCanvas(description, context, coordinates);
-      context.stroke();
-    }
 
-    function plotXY() {
-      var canvas = document.getElementById("graphCanvas");
-      var context = canvas.getContext("2d");
-      context.beginPath();     
-      context.moveTo(400, 0);
-      context.lineTo(400, 800);
-      context.stroke();
+// mock data
+polyline = [
+  [-173,-237],
+  [-139,-79],
+  [-46,-29],
+  [53,31],
+  [114,45],
+  [128,101],
+  [229,152],
+  [312,166],
+];
 
-      context.beginPath();     
-      context.moveTo(0, 400);
-      context.lineTo(800, 400);
-      context.stroke();
-    }
+// mock data
+points = [
+  [0,0],
+  [129, 295],
+];
 
-    plotXY();
+/*
+point: [x, y];
+segment: [ 
+  [x1, y1],
+  [x2, y2]
+];
+*/
+function calculatePointToLineDistance(point, segment) {
+  var a = segment[0];
+  var b = segment[1];
 
-    function plotPolyline(coordinatesArray) {
+  // calculates the gradient of the line (segment) using the formula
+  var gradient = (a[1] - b[1]) / (a[0] - b[0]);
 
-      var canvas = document.getElementById("graphCanvas");
-      var context = canvas.getContext("2d");
-      context.beginPath();
+  // general form of equation of a line (ax + by + c = 0) but
+  // using directly the gradient in the formula so we can 
+  // programmatically calculate the distance between the point and the line
+  // (m * x) - (m * x1) - y + y1) = 0
+  var distance = Math.abs((gradient * point[0]) - (gradient * a[0]) - point[1] + a[1]) / Math.sqrt(gradient ** 2 + 1);
 
-      var start = toCanvas(coordinatesArray[0]);
-      plotCircle(start, "start");
+  return Math.abs(distance);
+}
 
-      var end = toCanvas(coordinatesArray[coordinatesArray.length-1]);
-      plotCircle(end, "end");
+/*
+segment: [
+  [x1, y1],
+  [x2, y2]
+];
+*/
+function calculateHypotenuse(segment) {
+  var a = segment[0];
+  var b = segment[1];
 
-      context.moveTo(coordinatesArray[0][0]+canvasOffsetX, (-1*coordinatesArray[0][1])+canvasOffsetY);
-      for (var i = 1; i < coordinatesArray.length; i++) {
-        segments.push([coordinatesArray[i-1], coordinatesArray[i]]);
-        var pos = coordinatesArray[i];
-        pos = toCanvas(pos);
-        context.lineTo(pos[0], pos[1]);
+  // the station is the hypotenuse draw by two points of the polyline
+  // pythagorean formula: h^2 = a^2 + b^2
+  return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2);
+}
+
+/*
+offset: number; (distance between point and line/segment from polyline)
+point: [x, y];
+beginingOfLastSegment: [x, y];
+*/
+function calculateCathetus(offset, point, beginingOfLastSegment) {
+  // this segment is from input point to the begining of last segment
+  // result is the desired cathethus
+  var hypotenuse = calculateHypotenuse([point, beginingOfLastSegment]);
+
+  // using the pythagorean formula but since we have the offset and can calculate the hypotenuse
+  // so we can use the formula: b^2 = h^2 - a^2 to get the partial segment length that corresponds
+  // to the last segment of station
+  return Math.sqrt(((hypotenuse) ** 2) - ((offset) ** 2));
+}
+
+/*
+segment: [ 
+  [x1, y1],
+  [x2, y2]
+];
+point: [x, y];
+*/
+function findClosestSegment(segments, point) {
+
+  var closestSegment = undefined;
+  var closestSegmentIndex = undefined;
+  var closestOffset = undefined;
+
+  for (i = 0; i < segments.length; i++) {
+    var segment = segments[i];
+    var offset = calculatePointToLineDistance(point, segment);
+
+    if (!closestOffset || offset < closestOffset) {
+      var segmentLength = calculateHypotenuse(segment);
+      var segmentLengthToOffset = calculateCathetus(offset, point, segment[0]);
+      // if the length from start until offset is greater than the segment length itself then we can't use this segment
+      // the reason for this is the algorithm considers an infinite line and not a segment
+      if (segmentLengthToOffset > segmentLength) {
+        continue;
       }
-      context.stroke();
-
-      for (var i = 1; i < coordinatesArray.length -1; i++) {
-        var pos = coordinatesArray[i];
-        pos = toCanvas(pos);
-        plotCircle(pos, i);
-      }
-      
+      closestOffset = offset;
+      closestSegment = segment;
+      closestSegmentIndex = i;
     }
-    // canvas starts at 0,0 in the top left corner, so we have to fix it
-    function toCanvas(pos) {
-      return [pos[0]+canvasOffsetX, -1*(pos[1])+canvasOffsetY];  // TODO: multiply y by -1
+  }
+
+  if (!closestSegment) {
+    throw new Error('Cannot plot a perpendicular line to the polyline');
+  }
+
+  return {
+    closestSegment,
+    closestOffset,
+    closestSegmentIndex
+  };
+}
+
+/*
+segments: [
+      [x1, y1],
+      [x2, y2]
+    ],...];
+index: position of the segment in the segments array that is the closest to the point;
+point: [x, y];
+offset: calculated distance between point and line/segment from polyline;
+*/
+function calculateStation(segments, index, point, offset) {
+  var station = 0;
+  for (i = 0; i < index; i++) {
+    station += calculateHypotenuse(segments[i]);
+  }
+  var partialSegment = calculateCathetus(offset, point, segments[index][0])
+  station += partialSegment;
+  return station;
+}
+
+function breakPolylineIntoSegments(polyline) {
+  var segments = [];
+  for (i = 0; i < polyline.length - 1; i++) {
+    var segment = [polyline[i], polyline[i + 1]];
+    segments.push(segment);
+  }
+  return segments;
+}
+
+// iterates over all segments and calculates the station for each point
+function calculate(segments, point) {
+  var closestSegment = findClosestSegment(segments, point);
+
+  var station = calculateStation(segments, closestSegment.closestSegmentIndex, point, closestSegment.closestOffset);
+  resultDOM = document.createElement('div');
+  resultDOM.innerHTML = `
+    <h3>point: ${point}</h3>
+    <p>closest segment: s${closestSegment.closestSegmentIndex + 1}</p>
+    <p>closest segment coordinates: ${closestSegment.closestSegment[0]} — ${closestSegment.closestSegment[1]}</p>
+    <p>offset: ${closestSegment.closestOffset}</p>
+    <p>station (length from start): ${station}</p>
+  `;
+  resultsDOM.appendChild(resultDOM);
+}
+
+// reads the file selected by the user, cleans it, assigns to the relevant global variable
+// and rebuilds the page
+function readSelectedFile(event, source) {
+  var file = event.files[0];
+  var reader = new FileReader();
+  reader.readAsText(file);
+
+  reader.onload = function() {
+    content = reader.result;
+    lines = content.split(/\r?\n/);
+    linesWithTextOnly = lines.filter(n => n);
+    linesToCoordinates = linesWithTextOnly.map(line => line.split(',').map(Number));
+
+    switch(source) {
+      case "polyline":
+        polyline = linesToCoordinates;
+        break;
+      case "input":
+        points = linesToCoordinates;
+        break;
     }
+    main();
+  }
+}
 
-    // makes my life easier when thinking about the coordinates
-    function toCartesian(pos) {
-      return [pos[0]-canvasOffsetX, pos[1]-canvasOffsetY];
-    }
-  
-    function calculateDistance(point, segment) {
+// main function, it's called when page loads and/or the user selects a file
+function main() {
+  context.clearRect(0, 0, 800, 800);
+  context.beginPath();
+  plotXY();
+  plotPolyline(polyline);
+  plotInputPoints(points);
+  var segments = breakPolylineIntoSegments(polyline);
+  resultsDOM.innerHTML = '';
 
-      a = segment[0];
-      b = segment[1];
+  points.forEach(point => {
+    calculate(segments, point);
+  });
+}
 
-      gradient = (a[1]-b[1])/(a[0]-b[0]);
-      console.log("gradient", gradient);
+main();
 
-      // equacao fundamental da reta mas
-      // usando a formula do gradiente (coeficiente angular) junto
-      // (m * x) - (m * x1) - y + y1) = 0
+/* CANVAS PLOTING FROM HERE ON */
+// converts the coordinates to canvas coordinates
+function toCanvas(pos) {
+  return [pos[0]+canvasOffsetX, -1*(pos[1])+canvasOffsetY];
+}
 
-      distance = Math.abs((gradient * point[0]) - (gradient * a[0]) - point[1] + a[1]) / Math.sqrt(gradient**2 + 1);
-      console.log(distance);
-      return Math.abs(distance);
-    }
-  
-    // used to calculate the station of each segment from start
-    function calculateHypotenuse(segment) {
-      a = segment[0];
-      b = segment[1];
-      console.log("calculating",a,b)
+function toCartesian(pos) {
+  return [pos[0]-canvasOffsetX, -1*(pos[1]-canvasOffsetY)];
+}
 
-      return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2);
-    }
+// plots a point and add a label
+function plotPoint(coordinates, description=undefined, radius=2) {
+  if (!description) {
+    description = String(toCartesian(coordinates));
+  }
+  context.beginPath();
+  context.arc(coordinates[0], coordinates[1], radius, 0, 2 * Math.PI, false);
+  context.font = "bold 12px Arial";
+  context.textAlign = 'left';
+  context.textBaseline = 'left';
+  context.fillText(description, coordinates[0]+10, coordinates[1]-5);
+  context.fill();
+}
 
-    // used to calculate the station of the segment that is interrupted by the point
-    function calculateCathetus(offset, point, beginingOfLastSegment) {
-      // this segment is from point to begining of last segment
-      hypotenuse = calculateHypotenuse([point, beginingOfLastSegment]);
-      console.log("hyp", hypotenuse);
+function plotXY() {
+  context.strokeStyle = '#f0f0f0';
+  context.lineWidth = 1;
 
-      // result is the desired cathethus
-      return Math.sqrt(((hypotenuse)**2) - ((offset)**2));
-    }
+  context.beginPath();     
+  context.moveTo(400, 0);
+  context.lineTo(400, 800);
+  context.stroke();
 
-    // from input.csv, but only half of it to be an actual line
-    var coordinatesArray = [
-      [-173,-237],
-      [-139,-79],
-      [-46,-29],
-      [53,31],
-      [114,45],
-      [128,101],
-      [229,152],
-      [312,166],
-    ];
+  context.beginPath();     
+  context.moveTo(0, 400);
+  context.lineTo(800, 400);
+  context.stroke();
+}
 
-    plotPolyline(coordinatesArray);
+// plots the polyline
+function plotPolyline(coordinatesArray) {
 
-    point = [150, 200];
-    plotCircle(toCanvas(point), "input");
 
-    var segmentsListDOM = document.getElementById("segmentsList");
-    for (var i = 0; i < segments.length; i++) {
-      var segment = segments[i];
+  var coordinatesArray = coordinatesArray.map(pos => toCanvas(pos));
+  context.beginPath();
+  context.moveTo(coordinatesArray[0][0], coordinatesArray[0][1]);
+  coordinatesArray.forEach((pos, i) => {
+    context.strokeStyle = "red";
+    context.fillStyle = "red";
+    context.lineTo(pos[0], pos[1]);
+    context.stroke();
+    context.strokeStyle = "black";
+    context.fillStyle = "black";
+    plotPoint(pos);
+  });
+}
 
-      distance = calculateDistance(point, segment);
-      station = calculateCathetus(distance, point, segment[0]);
-
-      var segmentDOM = document.createElement("div");
-      segmentDOM.innerHTML = "Segment " + (i+1) + ": " + segment[0] + " — " + segment[1] + " d = " + distance + " s = " + station;
-      segmentsListDOM.appendChild(segmentDOM);
-
-      var msg = document.getElementById("message");
-      msg.innerHTML = "station = " + calculateCathetus(distance, point, segment[0]) + "<br>";
-      msg.innerHTML += "hypotenuse = " + calculateHypotenuse(segment);
-    }
-
-    closestSegmentIndex = 0;
-    closestSegment = segments[0];
-    closestDistance = 0;
-    for (var i = 0; i < segments.length; i++) {
-      var segment = segments[i];
-      distance = calculateDistance(point, segment);
-      if (distance < calculateDistance(point, closestSegment)) {
-        closestSegment = segment;
-        closestSegmentIndex = i;
-        closestDistance = distance;
-      }
-    }
-    station = 0;
-    for (var i = 0; i < closestSegmentIndex-1; i++) {
-      station += calculateHypotenuse(segments[i]);
-    }
-    station += calculateCathetus(distance, point, segment[0]);
-    console.log("closest segment", closestSegment);
-    console.log("closest distance", closestDistance);
-    console.log("station", station)
-
+function plotInputPoints(coordinatesArray) {
+  context.strokeStyle = "blue";
+  context.fillStyle = "blue";
+  var coordinatesArray = coordinatesArray.map(pos => toCanvas(pos));
+  coordinatesArray.forEach((pos, i) => {
+    plotPoint(pos);
+  });
+}
   </script>
 </body>
 </html>
