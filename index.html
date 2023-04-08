@@ -128,6 +128,10 @@ function findClosestSegment(segments, point) {
     var segment = segments[i];
     var offset = calculatePointToLineDistance(point, segment);
 
+    // edge case where the distance with next segment was close enough to be picked instead of the correct one
+    if (!(segment[0][0] <= point[0] && segment[1][0] >= point[0] || segment[0][1] <= point[1] && segment[1][1] >= point[1])) {
+      continue;
+    }
     if (!closestOffset || offset < closestOffset) {
       var segmentLength = calculateHypotenuse(segment);
       var segmentLengthToOffset = calculateCathetus(offset, point, segment[0]);
