@@ -1,313 +1,221 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
+
 <head>
-  <title>Fugro's Challenge</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee+Outline&family=DM+Sans:opsz@9..40&display=swap"
+    rel="stylesheet">
   <style>
-    canvas {
-      width: 800px;
-      height: 800px;
-      border: 1px solid black;
+    body {
+      font-family: "DM Sans", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: 400;
+      font-style: normal;
+      max-width: 680px;
+    }
+
+    h1 {
+      font-family: 'Bungee Outline', sans-serif;
+      font-size: 48px;
+      font-weight: 400;
+      font-style: normal;
+      margin-bottom: 0;
+      text-align: center;
+    }
+
+    p {
+      font-style: italic;
+      font-size: 12px;
+      margin-top: 0;
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    input[type="text"] {
+      width: 300px;
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 18px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      padding: 16px 28px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 24px;
+      margin-top: 32px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    button:hover:enabled {
+      background-color: #45a049;
+    }
+
+    .flex {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .flex.column {
+      flex-direction: column;
+    }
+
+    .flex.row {
+      flex-direction: row;
+    }
+
+    .flex.form-wrapper {
+      align-items: flex-start;
+      width: 300px;
+      margin: 10px auto;
+    }
+
+    .flex.row.form-wrapper {
+      justify-content: start;
+      gap: 0.33em;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    ::-webkit-input-placeholder {
+      /* WebKit browsers */
+      color: #fff;
+    }
+
+    :-moz-placeholder {
+      /* Mozilla Firefox 4 to 18 */
+      color: #fff;
+      opacity: 1;
+    }
+
+    ::-moz-placeholder {
+      /* Mozilla Firefox 19+ */
+      color: #fff;
+      opacity: 1;
+    }
+
+    :-ms-input-placeholder {
+      /* Internet Explorer 10+ */
+      color: #fff;
     }
   </style>
+  <title>Lançador do WhatsApp</title>
 </head>
 
 <body>
-  <h1>Files</h1>
-  <p>Polyline Coordinates:</p>
-  <input type="file" id="polyline-coordinates" onchange="readSelectedFile(this, 'polyline')">
-  <p>Input Points:</p>
-  <input type="file" id="input-points" onchange="readSelectedFile(this, 'input')">
+  <h1>Lançador do WhatsApp</h1>
+  <p>A solução para quem não quer salvar um novo contato só para abrir uma conversa no WhatsApp.</p>
 
-  <h1>Cartesian Plane</h1>
-  <div id="canvas-wrapper">
-    <canvas id="graph-canvas" width="800" height="800">
-      Your browser does not support the canvas element.
-    </canvas>
-  </div>
-  <h1>Segments</h1>
-  <div id="results">
-
+  <div class="flex column form-wrapper">
+    <label for="phoneInput">Digite ou cole o número de telefone:</label>
+    <input type="text" id="phoneInput" placeholder="Digite ou cole o número de telefone" oninput="updateButtonText()">
   </div>
 
-  <script>
-/* GLOBAL VARS */
+  <div class="flex row form-wrapper">
+    <input type="checkbox" id="trimZeroes" onchange="updateButtonText()">
+    <label for="trimZeroes">Remover zeros à esquerda</label>
+  </div>
 
-var resultsDOM = document.getElementById('results');
-var canvas = document.getElementById("graph-canvas");
-var context = canvas.getContext("2d");
+  <div class="flex row form-wrapper">
+    <input type="checkbox" id="appendCountryCode" onchange="toggleCountryCodeInput(); updateButtonText()">
+    <label for="appendCountryCode">Adicionar código do país</label>
+  </div>
 
-canvasOffset = canvasOffsetX = canvasOffsetY = 400;
+  <div class="flex column form-wrapper hidden" id="countryCodeWrapper">
+    <label for="customCountryCode">Código de país:</label>
+    <input type="text" id="customCountryCode" value="55" placeholder="ex.: 55" maxlength="3"
+      oninput="updateButtonText()">
+  </div>
 
-
-// mock data
-polyline = [
-  [-173,-237],
-  [-139,-79],
-  [-46,-29],
-  [53,31],
-  [114,45],
-  [128,101],
-  [229,152],
-  [312,166],
-];
-
-// mock data
-points = [
-  [0,0],
-  [129, 295],
-];
-
-/*
-point: [x, y];
-segment: [ 
-  [x1, y1],
-  [x2, y2]
-];
-*/
-function calculatePointToLineDistance(point, segment) {
-  var a = segment[0];
-  var b = segment[1];
-
-  // calculates the gradient of the line (segment) using the formula
-  var gradient = (a[1] - b[1]) / (a[0] - b[0]);
-
-  // general form of equation of a line (ax + by + c = 0) but
-  // using directly the gradient in the formula so we can 
-  // programmatically calculate the distance between the point and the line
-  // (m * x) - (m * x1) - y + y1) = 0
-  var distance = Math.abs((gradient * point[0]) - (gradient * a[0]) - point[1] + a[1]) / Math.sqrt(gradient ** 2 + 1);
-
-  return Math.abs(distance);
-}
-
-/*
-segment: [
-  [x1, y1],
-  [x2, y2]
-];
-*/
-function calculateHypotenuse(segment) {
-  var a = segment[0];
-  var b = segment[1];
-
-  // the station is the hypotenuse draw by two points of the polyline
-  // pythagorean formula: h^2 = a^2 + b^2
-  return Math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2);
-}
-
-/*
-offset: number; (distance between point and line/segment from polyline)
-point: [x, y];
-beginingOfLastSegment: [x, y];
-*/
-function calculateCathetus(offset, point, beginingOfLastSegment) {
-  // this segment is from input point to the begining of last segment
-  // result is the desired cathethus
-  var hypotenuse = calculateHypotenuse([point, beginingOfLastSegment]);
-
-  // using the pythagorean formula but since we have the offset and can calculate the hypotenuse
-  // so we can use the formula: b^2 = h^2 - a^2 to get the partial segment length that corresponds
-  // to the last segment of station
-  return Math.sqrt(((hypotenuse) ** 2) - ((offset) ** 2));
-}
-
-/*
-segment: [ 
-  [x1, y1],
-  [x2, y2]
-];
-point: [x, y];
-*/
-function findClosestSegment(segments, point) {
-
-  var closestSegment = undefined;
-  var closestSegmentIndex = undefined;
-  var closestOffset = undefined;
-
-  for (i = 0; i < segments.length; i++) {
-    var segment = segments[i];
-    var offset = calculatePointToLineDistance(point, segment);
-
-    // edge case where the distance with next segment was close enough to be picked instead of the correct one
-    if (!(segment[0][0] <= point[0] && segment[1][0] >= point[0] || segment[0][1] <= point[1] && segment[1][1] >= point[1])) {
-      continue;
-    }
-    if (!closestOffset || offset < closestOffset) {
-      var segmentLength = calculateHypotenuse(segment);
-      var segmentLengthToOffset = calculateCathetus(offset, point, segment[0]);
-      // if the length from start until offset is greater than the segment length itself then we can't use this segment
-      // the reason for this is the algorithm considers an infinite line and not a segment
-      if (segmentLengthToOffset > segmentLength) {
-        continue;
-      }
-      closestOffset = offset;
-      closestSegment = segment;
-      closestSegmentIndex = i;
-    }
-  }
-
-  if (!closestSegment) {
-    throw new Error('Cannot plot a perpendicular line to the polyline');
-  }
-
-  return {
-    closestSegment,
-    closestOffset,
-    closestSegmentIndex
-  };
-}
-
-/*
-segments: [
-      [x1, y1],
-      [x2, y2]
-    ],...];
-index: position of the segment in the segments array that is the closest to the point;
-point: [x, y];
-offset: calculated distance between point and line/segment from polyline;
-*/
-function calculateStation(segments, index, point, offset) {
-  var station = 0;
-  for (i = 0; i < index; i++) {
-    station += calculateHypotenuse(segments[i]);
-  }
-  var partialSegment = calculateCathetus(offset, point, segments[index][0])
-  station += partialSegment;
-  return station;
-}
-
-function breakPolylineIntoSegments(polyline) {
-  var segments = [];
-  for (i = 0; i < polyline.length - 1; i++) {
-    var segment = [polyline[i], polyline[i + 1]];
-    segments.push(segment);
-  }
-  return segments;
-}
-
-// iterates over all segments and calculates the station for each point
-function calculate(segments, point) {
-  var closestSegment = findClosestSegment(segments, point);
-
-  var station = calculateStation(segments, closestSegment.closestSegmentIndex, point, closestSegment.closestOffset);
-  resultDOM = document.createElement('div');
-  resultDOM.innerHTML = `
-    <h3>point: ${point}</h3>
-    <p>closest segment: s${closestSegment.closestSegmentIndex + 1}</p>
-    <p>closest segment coordinates: ${closestSegment.closestSegment[0]} — ${closestSegment.closestSegment[1]}</p>
-    <p>offset: ${closestSegment.closestOffset}</p>
-    <p>station (length from start): ${station}</p>
-  `;
-  resultsDOM.appendChild(resultDOM);
-}
-
-// reads the file selected by the user, cleans it, assigns to the relevant global variable
-// and rebuilds the page
-function readSelectedFile(event, source) {
-  var file = event.files[0];
-  var reader = new FileReader();
-  reader.readAsText(file);
-
-  reader.onload = function() {
-    content = reader.result;
-    lines = content.split(/\r?\n/);
-    linesWithTextOnly = lines.filter(n => n);
-    linesToCoordinates = linesWithTextOnly.map(line => line.split(',').map(Number));
-
-    switch(source) {
-      case "polyline":
-        polyline = linesToCoordinates;
-        break;
-      case "input":
-        points = linesToCoordinates;
-        break;
-    }
-    main();
-  }
-}
-
-// main function, it's called when page loads and/or the user selects a file
-function main() {
-  context.clearRect(0, 0, 800, 800);
-  context.beginPath();
-  plotXY();
-  plotPolyline(polyline);
-  plotInputPoints(points);
-  var segments = breakPolylineIntoSegments(polyline);
-  resultsDOM.innerHTML = '';
-
-  points.forEach(point => {
-    calculate(segments, point);
-  });
-}
-
-main();
-
-/* CANVAS PLOTING FROM HERE ON */
-// converts the coordinates to canvas coordinates
-function toCanvas(pos) {
-  return [pos[0]+canvasOffsetX, -1*(pos[1])+canvasOffsetY];
-}
-
-function toCartesian(pos) {
-  return [pos[0]-canvasOffsetX, -1*(pos[1]-canvasOffsetY)];
-}
-
-// plots a point and add a label
-function plotPoint(coordinates, description=undefined, radius=2) {
-  if (!description) {
-    description = String(toCartesian(coordinates));
-  }
-  context.beginPath();
-  context.arc(coordinates[0], coordinates[1], radius, 0, 2 * Math.PI, false);
-  context.font = "bold 12px Arial";
-  context.textAlign = 'left';
-  context.textBaseline = 'left';
-  context.fillText(description, coordinates[0]+10, coordinates[1]-5);
-  context.fill();
-}
-
-function plotXY() {
-  context.strokeStyle = '#f0f0f0';
-  context.lineWidth = 1;
-
-  context.beginPath();     
-  context.moveTo(400, 0);
-  context.lineTo(400, 800);
-  context.stroke();
-
-  context.beginPath();     
-  context.moveTo(0, 400);
-  context.lineTo(800, 400);
-  context.stroke();
-}
-
-// plots the polyline
-function plotPolyline(coordinatesArray) {
-
-
-  var coordinatesArray = coordinatesArray.map(pos => toCanvas(pos));
-  context.beginPath();
-  context.moveTo(coordinatesArray[0][0], coordinatesArray[0][1]);
-  coordinatesArray.forEach((pos, i) => {
-    context.strokeStyle = "red";
-    context.fillStyle = "red";
-    context.lineTo(pos[0], pos[1]);
-    context.stroke();
-    context.strokeStyle = "black";
-    context.fillStyle = "black";
-    plotPoint(pos);
-  });
-}
-
-function plotInputPoints(coordinatesArray) {
-  context.strokeStyle = "blue";
-  context.fillStyle = "blue";
-  var coordinatesArray = coordinatesArray.map(pos => toCanvas(pos));
-  coordinatesArray.forEach((pos, i) => {
-    plotPoint(pos);
-  });
-}
-  </script>
+  <div class="flex row" id="countryCodeWrapper">
+    <input type="hidden" id="contactPhone" value="">
+    <button id="launchButton" onclick="launchWhatsApp()" disabled>Abrir Conversa</button>
+  </div>
 </body>
+
+<script>
+  function toggleCountryCodeInput() {
+    const appendCountryCode = document.getElementById("appendCountryCode").checked;
+    const countryCodeWrapper = document.getElementById("countryCodeWrapper");
+    countryCodeWrapper.classList.toggle("hidden", !appendCountryCode);
+  }
+
+  function formatPhoneNumber12(phone) {
+    return phone.replace(/(\d{2})(\d{2})(\d{4})(\d{4})/, "+$1 ($2) $3-$4");
+  }
+
+  function formatPhoneNumber13(phone) {
+    return phone.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, "+$1 ($2) $3-$4");
+  }
+
+  function formatI18nPhoneNumber(phone) {
+    return phone.replace(/(\d{2})(\d{3})(\d{3})(\d{4})/, "+$1 ($2) $3-$4");
+  }
+
+  function updateButtonText() {
+    let input = document.getElementById("phoneInput").value;
+    const trimZeroes = document.getElementById("trimZeroes").checked;
+    const appendCountryCode = document.getElementById("appendCountryCode").checked;
+    const customCountryCode = document.getElementById("customCountryCode").value;
+
+    input = input.replace(/\D/g, '');
+
+    if (trimZeroes) {
+      input = input.replace(/^0+/, '');
+    }
+
+    let countryCode = "55";
+    if (appendCountryCode) {
+      input = (customCountryCode ?? countryCode) + input;
+    }
+
+    const button = document.getElementById("launchButton");
+
+    let formatter = formatI18nPhoneNumber;
+
+    if (appendCountryCode && countryCode === "55") {
+      switch (input.length) {
+        case 12:
+          formatter = formatPhoneNumber12;
+          break;
+        case 13:
+          formatter = formatPhoneNumber13;
+          break;
+        default:
+          formatter = formatI18nPhoneNumber;
+          break;
+      }
+    }
+
+    const formattedInput = input ? formatter(input) : "";
+    button.textContent = formattedInput ? `Abrir Conversa com ${formattedInput}` : "Abrir Conversa";
+    document.getElementById("contactPhone").value = input;
+    button.disabled = !input || input.length < 10;
+  }
+
+  function launchWhatsApp() {
+    const input = document.getElementById("contactPhone").value;
+    if (input) {
+      const whatsappLink = "https://wa.me/" + input;
+      window.open(whatsappLink, '_blank');
+    }
+  }
+</script>
+
 </html>
